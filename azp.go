@@ -23,42 +23,70 @@ type WorkUnit struct {
 	comment   string
 }
 
-func (w *WorkUnit) String() string {
-	return fmt.Sprintf("from %s to %s, break %d, work_time %s, comment: %s", w.from, w.to, w.brk_min, w.work_time, w.comment)
+func ParseTime (t string) (int, int, error){
+	var err error
+	var hour int
+	var minute int
+	parts := strings.Split(t, ":")	
+	if len(parts) != 2 {
+		return hour, minute, errors.New("error parsing time")
+	}
+	hour, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return hour, minute, err
+	}
+	minute, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return hour, minute, err
+	}
+	return hour, minute, nil
 }
 
-func ParseTime (timestring string) (hour, minute int) {
-	fmt.Println("timestring:", timestring)
-	str_hour, str_minute := strings.Split(timestring, ":")
-	hour, err := strconv.Atoi(str_hour)
-	minute, err := strconv.Atoi(str_minute)
-	return hour, minute
+func ParseDate (d string) (int, int, error){
+	var err error
+	var day int
+	var month int
+	parts := strings.Split(d, ".")	
+	if len(parts) != 2 {
+		return day, month, errors.New("error parsing date")
+	}
+	day, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return day, month, err
+	}
+	month, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return day, month, err
+	}
+	return day, month, nil
 }
 	
 
 func ParseLine (line string) (WorkUnit, error) {
+	var w WorkUnit
 	year := time.Now().Year()
 	field := strings.Fields(line)
-	//date
-	day, month = strings.Split(field[0],".")
-	day, err := strconv.Atoi(day)
-	month, err := strconv.Atoi(month)
-	//from time
-	f_hour, f_min := ParseTime(field[1])
-	from_time, err = time.Date(year, time.Month(month), day, f_hour, f_min, 0, 0, time.UTC)
-	//to time
-	t_hour, t_min := ParseTime(field[2])
-	to_time, err = time.Date(year, time.Month(month), day, t_hour, t_min, 0, 0, time.UTC)
-
-	brk_time_int, err := strconv.Atoi(field[3])
-	brk_time := time.Duration( brk_time_int * time.Minute )
-
-	work_time = to_time.Sub(from_time) - brk_time
-
-	w := WorkUnit{ from_time, to_time, brk_time, work_time, "foobar" }
-	if 1 == 0 {
-		return w, errors.New("error parsing line")
+	day, month, err := ParseDate(field[0])
+	if err != nil {
+		return w, err
 	}
+	f_hour, f_min, _ := ParseTime(field[1])
+	//from_time := time.Date(year, time.Month(month), day, f_hour, f_min, 0, 0, time.UTC)
+	from_time, err_fd := time.Parse("2006-1-2 15:04", fmt.Sprintf("%.4d-%.2d-%.2d %.2d:%.2d", year, month, day, f_hour, f_min))
+	if err_fd != nil {
+		log.Fatal(err_fd)
+	}
+	t_hour, t_min, _ := ParseTime(field[2])
+	to_time, err_td := time.Parse("2006-01-02 15:04", fmt.Sprintf("%.4d-%.2d-%.2d %.2d:%.2d", year, month, day, t_hour, t_min))
+	if err_td != nil {
+		log.Fatal(err_td)
+	}
+	brk_time_int, _ := strconv.Atoi(field[3])
+	brk_time := time.Duration( brk_time_int ) * time.Minute 
+
+	work_time := to_time.Sub(from_time) - brk_time
+
+	w = WorkUnit{ from_time, to_time, brk_time, work_time, "foobar" }
 	return w, nil
 }
 
@@ -76,8 +104,6 @@ func GetWorkUnits(r io.Reader) ([]WorkUnit, error){
 			log.Fatal(err)
 		}
 		WorkUnits = append(WorkUnits, WorkUnit)
-		fmt.Printf("'%v' %T\n%v %T\n", line, line, fields, fields)
-		//fmt.Printf(" -->> %v\n", fields)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -100,11 +126,16 @@ func main() {
 	}
 	defer file.Close()
 
-	fmt.Println("start get workunits")
 	WorkUnits, err := GetWorkUnits(file)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(WorkUnits)
-
+	for _, w := range WorkUnits {
+		fmt.Println(w.from)
+		fmt.Println(w.to)
+		fmt.Println(w.brk_min)
+		fmt.Println(w.work_time)
+		fmt.Println(w.comment)
+		fmt.Println("------")
+	}
 }
