@@ -12,81 +12,58 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"unicode"
 )
 
 
 type WorkUnit struct {
-	from      time.Time	 //work start time
-	to        time.Time	 //work end time
-        brk_min   time.Duration  //break
-	work_time time.Duration  //to - from - brk_min
-	comment   string
+	start_time   time.Time
+	end_time     time.Time
+        break_time   time.Duration
+	work_time    time.Duration
+	comment      string
 }
-
-func ParseTime (t string) (int, int, error){
-	var err error
-	var hour int
-	var minute int
-	parts := strings.Split(t, ":")	
-	if len(parts) != 2 {
-		return hour, minute, errors.New("error parsing time")
-	}
-	hour, err = strconv.Atoi(parts[0])
-	if err != nil {
-		return hour, minute, err
-	}
-	minute, err = strconv.Atoi(parts[1])
-	if err != nil {
-		return hour, minute, err
-	}
-	return hour, minute, nil
-}
-
-func ParseDate (d string) (int, int, error){
-	var err error
-	var day int
-	var month int
-	parts := strings.Split(d, ".")	
-	if len(parts) != 2 {
-		return day, month, errors.New("error parsing date")
-	}
-	day, err = strconv.Atoi(parts[0])
-	if err != nil {
-		return day, month, err
-	}
-	month, err = strconv.Atoi(parts[1])
-	if err != nil {
-		return day, month, err
-	}
-	return day, month, nil
-}
-	
 
 func ParseLine (line string) (WorkUnit, error) {
-	var w WorkUnit
 	year := time.Now().Year()
 	field := strings.Fields(line)
-	day, month, err := ParseDate(field[0])
+
+	//work start time
+	from_time, err := time.Parse("2006-1-2 15:04",fmt.Sprintf("%s.%.4d %s", field[0], year, field[1]))
 	if err != nil {
-		return w, err
-	}
-	f_hour, f_min, _ := ParseTime(field[1])
-	//from_time := time.Date(year, time.Month(month), day, f_hour, f_min, 0, 0, time.UTC)
-	from_time, err_fd := time.Parse("2006-1-2 15:04", fmt.Sprintf("%.4d-%.2d-%.2d %.2d:%.2d", year, month, day, f_hour, f_min))
-	if err_fd != nil {
 		log.Fatal(err_fd)
 	}
-	t_hour, t_min, _ := ParseTime(field[2])
-	to_time, err_td := time.Parse("2006-01-02 15:04", fmt.Sprintf("%.4d-%.2d-%.2d %.2d:%.2d", year, month, day, t_hour, t_min))
-	if err_td != nil {
+
+	//work finish time
+	from_time, err := time.Parse("2006-1-2 15:04",fmt.Sprintf("%s.%.4d %s", field[0], year, field[2]))
+	if err != nil {
 		log.Fatal(err_td)
 	}
-	brk_time_int, _ := strconv.Atoi(field[3])
-	brk_time := time.Duration( brk_time_int ) * time.Minute 
 
-	work_time := to_time.Sub(from_time) - brk_time
+	//break time
+	var break_time time.Duration
 
-	w = WorkUnit{ from_time, to_time, brk_time, work_time, "foobar" }
+	//if last byte is numeric treat as minutes
+	var last_byte = rune(field[3][len(field[3])-1])
+	if '0' <= last_byte && last_byte <= '9' {
+		break_time_int, err := strconv.Atoi(field[3])
+		if err != nil {
+			return nil, err
+		}
+		break_time = time.Duration( break_time_int) * time.Minute
+	} else {
+		break_time, err = time.ParseDuration(field[3])
+	}
+
+	//work time
+	work_time := to_time.Sub(from_time) - break_time
+
+	//comment
+	var comment string = ""
+	if len(field) > 4 {
+		comment = field[4]
+	}	
+	w := WorkUnit{ from_time, to_time, break_time, work_time, comment}
 	return w, nil
 }
 
