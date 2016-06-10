@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"errors"
+	"sort"
 )
 
 type WorkUnit struct {
@@ -97,8 +98,13 @@ func GetWorkUnits(r io.Reader) ([]WorkUnit, error) {
 	return WorkUnits, nil
 }
 
-func PrintSummary(WorkUnits *[]WorkUnit) {
-	for _, w := range *WorkUnits {
+func PrintSummary(WorkUnits []WorkUnit) {
+	sort.Sort(ByTime(WorkUnits))
+	target_work_time := time.Duration( 8 * time.Hour )
+	total_diff := time.Duration( 0 )
+	//week_diff := time.Duration( 0 )
+	for _, w := range WorkUnits {
+		total_diff += w.work_time - target_work_time
 		fmt.Println(w.start_time)
 		fmt.Println(w.end_time)
 		fmt.Println(w.break_time)
@@ -106,7 +112,14 @@ func PrintSummary(WorkUnits *[]WorkUnit) {
 		fmt.Println(w.comment)
 		fmt.Println("------")
 	}
+	fmt.Printf("total: %s", total_diff)
 }
+
+type ByTime []WorkUnit
+
+func (t ByTime) Len() int { return len(t) }
+func (t ByTime) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
+func (t ByTime) Less(i, j int) bool { return t[i].start_time.Before(t[j].start_time) }
 
 func main() {
 	current_user, err := user.Current()
@@ -123,5 +136,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	PrintSummary(&WorkUnits)
+	PrintSummary(WorkUnits)
 }
