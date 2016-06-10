@@ -107,12 +107,6 @@ func PrintSummary(WorkUnits []WorkUnit) {
 		day_diff := w.work_time - target_work_time
 		total_diff += day_diff
 		fmt.Printf("%s\t%s - %s\t%s %s\n", w.start_time.Format("2.1"), w.start_time.Format("15:04"), w.end_time.Format("15:04"), w.work_time, day_diff)
-		//fmt.Println(w.start_time)
-		//fmt.Println(w.end_time)
-		//fmt.Println(w.break_time)
-		//fmt.Println(w.work_time)
-		//fmt.Println(w.comment)
-		//fmt.Println("------")
 	}
 	fmt.Printf("total: %s", total_diff)
 }
