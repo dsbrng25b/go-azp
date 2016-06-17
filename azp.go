@@ -23,6 +23,12 @@ type WorkUnit struct {
 	comment    string
 }
 
+type WorkUnits []WorkUnit
+
+func (t WorkUnits) Len() int { return len(t) }
+func (t WorkUnits) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
+func (t WorkUnits) Less(i, j int) bool { return t[i].start_time.Before(t[j].start_time) }
+
 func ParseLine(line string) (WorkUnit, error) {
 	var w WorkUnit
 	var year int = time.Now().Year()
@@ -98,8 +104,8 @@ func GetWorkUnits(r io.Reader) ([]WorkUnit, error) {
 	return WorkUnits, nil
 }
 
-func PrintSummary(WorkUnits []WorkUnit) {
-	sort.Sort(ByTime(WorkUnits))
+func PrintSummary(WorkUnits WorkUnits) {
+	sort.Sort(WorkUnits)
 	target_work_time := time.Duration( 8 * time.Hour )
 	total_diff := time.Duration( 0 )
 	//week_diff := time.Duration( 0 )
@@ -111,11 +117,6 @@ func PrintSummary(WorkUnits []WorkUnit) {
 	fmt.Printf("total: %s", total_diff)
 }
 
-type ByTime []WorkUnit
-
-func (t ByTime) Len() int { return len(t) }
-func (t ByTime) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
-func (t ByTime) Less(i, j int) bool { return t[i].start_time.Before(t[j].start_time) }
 
 func main() {
 	current_user, err := user.Current()
